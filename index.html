@@ -176,46 +176,69 @@
             100% { opacity: 0; }
         }
 
-        .x2-indicator {
-            font-size: 0.85rem;
-            color: #ffd54f;
-            font-weight: 700;
-            margin-top: 2px;
-        }
-
         /* Game over screen */
         #game-over {
             position: fixed;
             inset: 0;
             z-index: 100;
-            background: rgba(0,0,0,0.9);
+            background: radial-gradient(ellipse at center, #1a1a3e 0%, #0a0a1a 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 20px;
+            gap: 16px;
+            overflow: hidden;
         }
 
         #game-over h1 {
             color: #fff;
-            font-size: 2.5rem;
+            font-size: 2.8rem;
+            font-weight: 900;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.3);
+            animation: celebrateTitle 2s ease-in-out infinite;
+        }
+
+        @keyframes celebrateTitle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         #game-over p {
-            color: rgba(255,255,255,0.7);
-            font-size: 1.1rem;
+            color: rgba(255,255,255,0.8);
+            font-size: 1.2rem;
+            text-align: center;
         }
 
         #restart-btn {
-            padding: 16px 48px;
-            font-size: 1.3rem;
+            padding: 18px 52px;
+            font-size: 1.4rem;
             font-weight: 700;
             border: none;
             border-radius: 16px;
             background: linear-gradient(135deg, #f9a825, #ff8f00);
             color: #fff;
             cursor: pointer;
-            box-shadow: 0 4px 16px rgba(249, 168, 37, 0.4);
+            box-shadow: 0 4px 24px rgba(249, 168, 37, 0.5);
+            margin-top: 10px;
+            transition: transform 0.1s;
+        }
+
+        #restart-btn:active {
+            transform: scale(0.95);
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            animation: confettiFall linear forwards;
+            pointer-events: none;
+        }
+
+        @keyframes confettiFall {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
         }
 
         /* Center divider */
@@ -241,24 +264,24 @@
             letter-spacing: 1px;
         }
 
-        .turn-indicator {
-            position: absolute;
-            font-size: 1.4rem;
-            color: rgba(255,255,255,0.9);
-            animation: pulse 1s infinite;
+        .x2-indicator {
+            position: fixed;
+            top: 50%;
+            left: 8px;
+            transform: translateY(-50%);
+            z-index: 50;
+            font-size: 0.85rem;
+            color: #ffd54f;
+            font-weight: 900;
+            text-shadow: 0 0 12px rgba(255, 213, 79, 0.6);
+            animation: pulseGlow 1.5s infinite;
+            writing-mode: vertical-rl;
+            letter-spacing: 2px;
         }
 
-        #player-red .turn-indicator {
-            bottom: 10px;
-        }
-
-        #player-blue .turn-indicator {
-            top: 10px;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; text-shadow: 0 0 12px rgba(255, 213, 79, 0.6); }
+            50% { opacity: 0.7; text-shadow: 0 0 20px rgba(255, 213, 79, 0.9); }
         }
 
         /* Start screen */
@@ -306,17 +329,19 @@
 
         #reset-btn {
             position: fixed;
-            bottom: 12px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
             z-index: 50;
-            padding: 6px 16px;
+            padding: 6px 12px;
             border-radius: 12px;
             border: none;
             background: rgba(255,255,255,0.15);
             color: rgba(255,255,255,0.6);
             font-size: 0.75rem;
             cursor: pointer;
+            writing-mode: vertical-rl;
+            letter-spacing: 2px;
         }
 
         .hidden { display: none !important; }
@@ -341,8 +366,7 @@
     </div>
     <div class="elixir-buttons" id="btns-red"></div>
     <button class="skip-btn hidden" id="skip-red">ЗАВЕРШИТЬ ХОД</button>
-    <div class="x2-indicator hidden" id="x2-red">x2 ЭЛИКСИР</div>
-    <div class="turn-indicator hidden" id="turn-red">ВАШ ХОД</div>
+
 </div>
 
 <div class="divider">
@@ -358,14 +382,16 @@
     </div>
     <div class="elixir-buttons" id="btns-blue"></div>
     <button class="skip-btn hidden" id="skip-blue">ЗАВЕРШИТЬ ХОД</button>
-    <div class="x2-indicator hidden" id="x2-blue">x2 ЭЛИКСИР</div>
-    <div class="turn-indicator hidden" id="turn-blue">ВАШ ХОД</div>
+
 </div>
 
+<div class="x2-indicator hidden" id="x2-global">ЭЛИКСИР x2</div>
+
 <div id="game-over" class="hidden">
-    <h1>ИГРА ОКОНЧЕНА</h1>
+    <h1>ИГРА ОКОНЧЕНА!</h1>
+    <p>Подсчитайте башни и определите победителя!</p>
     <p id="game-over-info"></p>
-    <button id="restart-btn">ЗАНОВО</button>
+    <button id="restart-btn">ИГРАТЬ ЗАНОВО</button>
 </div>
 
 <button id="reset-btn" class="hidden">СБРОС</button>
@@ -431,17 +457,12 @@
         $('player-red').classList.toggle('inactive', currentTurn !== 'red');
         $('player-blue').classList.toggle('inactive', currentTurn !== 'blue');
 
-        // Turn indicators
-        $('turn-red').classList.toggle('hidden', currentTurn !== 'red');
-        $('turn-blue').classList.toggle('hidden', currentTurn !== 'blue');
-
         // Skip buttons — only visible for active player
         $('skip-red').classList.toggle('hidden', currentTurn !== 'red');
         $('skip-blue').classList.toggle('hidden', currentTurn !== 'blue');
 
-        // x2 indicators
-        $('x2-red').classList.toggle('hidden', !isDoubleElixir);
-        $('x2-blue').classList.toggle('hidden', !isDoubleElixir);
+        // x2 indicator
+        $('x2-global').classList.toggle('hidden', !isDoubleElixir);
 
         const totalTurns = turns.red + turns.blue;
         $('turn-label').textContent = (currentTurn === 'red' ? 'ХОД КРАСНОГО' : 'ХОД СИНЕГО')
@@ -457,6 +478,22 @@
         });
     }
 
+    function spawnConfetti() {
+        const container = $('game-over');
+        const colors = ['#f9a825', '#e53935', '#1e88e5', '#43a047', '#ab47bc', '#fff', '#ff7043'];
+        for (let i = 0; i < 80; i++) {
+            const c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.left = Math.random() * 100 + '%';
+            c.style.background = colors[Math.floor(Math.random() * colors.length)];
+            c.style.animationDuration = (2 + Math.random() * 3) + 's';
+            c.style.animationDelay = (Math.random() * 2) + 's';
+            c.style.width = (6 + Math.random() * 8) + 'px';
+            c.style.height = (6 + Math.random() * 8) + 'px';
+            container.appendChild(c);
+        }
+    }
+
     function endGame() {
         clearInterval(interval);
         gameStarted = false;
@@ -464,6 +501,7 @@
         $('reset-btn').classList.add('hidden');
         $('game-over-info').textContent =
             `Красный: ${elixir.red} эликсира | Синий: ${elixir.blue} эликсира`;
+        spawnConfetti();
     }
 
     function switchTurn() {
@@ -520,6 +558,7 @@
         $('start-screen').classList.remove('hidden');
         $('reset-btn').classList.add('hidden');
         $('game-over').classList.add('hidden');
+        $('game-over').querySelectorAll('.confetti').forEach(c => c.remove());
     }
 
     // Skip turn buttons
