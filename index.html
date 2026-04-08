@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Clash Royale - Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .player-half {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: filter 0.3s;
+        }
+
+        .player-half.inactive {
+            filter: brightness(0.5);
+        }
+
+        #player-red {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+            transform: rotate(180deg);
+        }
+
+        #player-blue {
+            background: linear-gradient(135deg, #1565c0, #0d47a1);
+        }
+
+        .player-label {
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.7);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .timer {
+            font-size: 4rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .elixir-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .elixir-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #ab47bc, #7b1fa2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .elixir-count {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .elixir-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 340px;
+        }
+
+        .elixir-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.25);
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, background 0.1s;
+        }
+
+        .elixir-btn:active {
+            transform: scale(0.9);
+            background: rgba(0,0,0,0.5);
+        }
+
+        .elixir-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .skip-btn {
+            padding: 10px 28px;
+            border-radius: 14px;
+            border: 2px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.1s, background 0.1s;
+        }
+
+        .skip-btn:active {
+            transform: scale(0.9);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .skip-btn.hidden {
+            display: none !important;
+        }
+
+        .phase-badge {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 900;
+            padding: 20px 40px;
+            border-radius: 20px;
+            text-align: center;
+            animation: fadeOut 2s forwards;
+            pointer-events: none;
+        }
+
+        .phase-badge .sub {
+            font-size: 1rem;
+            font-weight: 400;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        @keyframes fadeOut {
+            0%, 60% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        .x2-indicator {
+            font-size: 0.85rem;
+            color: #ffd54f;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        /* Game over screen */
+        #game-over {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        #game-over h1 {
+            color: #fff;
+            font-size: 2.5rem;
+        }
+
+        #game-over p {
+            color: rgba(255,255,255,0.7);
+            font-size: 1.1rem;
+        }
+
+        #restart-btn {
+            padding: 16px 48px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f9a825, #ff8f00);
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(249, 168, 37, 0.4);
+        }
+
+        /* Center divider */
+        .divider {
+            position: relative;
+            z-index: 10;
+            height: 0;
+        }
+
+        .divider-bar {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            font-weight: 800;
+            font-size: 0.9rem;
+            padding: 6px 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            letter-spacing: 1px;
+        }
+
+        .turn-indicator {
+            position: absolute;
+            font-size: 1.4rem;
+            color: rgba(255,255,255,0.9);
+            animation: pulse 1s infinite;
+        }
+
+        #player-red .turn-indicator {
+            bottom: 10px;
+        }
+
+        #player-blue .turn-indicator {
+            top: 10px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Start screen */
+        #start-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        #start-screen h1 {
+            color: #fff;
+            font-size: 2rem;
+            text-align: center;
+        }
+
+        #start-screen .subtitle {
+            color: rgba(255,255,255,0.6);
+            font-size: 1rem;
+            text-align: center;
+            max-width: 280px;
+        }
+
+        #start-btn {
+            padding: 16px 48px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f9a825, #ff8f00);
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(249, 168, 37, 0.4);
+            transition: transform 0.1s;
+        }
+
+        #start-btn:active {
+            transform: scale(0.95);
+        }
+
+        #reset-btn {
+            position: fixed;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            padding: 6px 16px;
+            border-radius: 12px;
+            border: none;
+            background: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.6);
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<!-- Start Screen -->
+<div id="start-screen">
+    <h1>Clash Royale<br>Board Game Timer</h1>
+    <p class="subtitle">Таймер ходов и счётчик эликсира для настольной игры</p>
+    <button id="start-btn">НАЧАТЬ</button>
+</div>
+
+<!-- Game Screen -->
+<div id="player-red" class="player-half inactive">
+    <div class="player-label">Красный</div>
+    <div class="timer" id="timer-red">20</div>
+    <div class="elixir-display">
+        <div class="elixir-icon">E</div>
+        <div class="elixir-count" id="elixir-red">0</div>
+    </div>
+    <div class="elixir-buttons" id="btns-red"></div>
+    <button class="skip-btn hidden" id="skip-red">ЗАВЕРШИТЬ ХОД</button>
+    <div class="x2-indicator hidden" id="x2-red">x2 ЭЛИКСИР</div>
+    <div class="turn-indicator hidden" id="turn-red">ВАШ ХОД</div>
+</div>
+
+<div class="divider">
+    <div class="divider-bar" id="turn-label">ОЖИДАНИЕ</div>
+</div>
+
+<div id="player-blue" class="player-half inactive">
+    <div class="player-label">Синий</div>
+    <div class="timer" id="timer-blue">20</div>
+    <div class="elixir-display">
+        <div class="elixir-icon">E</div>
+        <div class="elixir-count" id="elixir-blue">0</div>
+    </div>
+    <div class="elixir-buttons" id="btns-blue"></div>
+    <button class="skip-btn hidden" id="skip-blue">ЗАВЕРШИТЬ ХОД</button>
+    <div class="x2-indicator hidden" id="x2-blue">x2 ЭЛИКСИР</div>
+    <div class="turn-indicator hidden" id="turn-blue">ВАШ ХОД</div>
+</div>
+
+<div id="game-over" class="hidden">
+    <h1>ИГРА ОКОНЧЕНА</h1>
+    <p id="game-over-info"></p>
+    <button id="restart-btn">ЗАНОВО</button>
+</div>
+
+<button id="reset-btn" class="hidden">СБРОС</button>
+
+<script>
+    const TURN_TIME = 20;
+    const MAX_ELIXIR = 10;
+    const COSTS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    const X2_THRESHOLD = 15;   // after 15 turns each → x2 elixir
+    const END_THRESHOLD = 30;  // after 30 turns each → game over
+
+    let elixir = { red: 0, blue: 0 };
+    let turns = { red: 0, blue: 0 };
+    let timer = TURN_TIME;
+    let currentTurn = 'red';
+    let interval = null;
+    let gameStarted = false;
+    let isDoubleElixir = false;
+
+    const $ = id => document.getElementById(id);
+
+    // Build elixir spend buttons for both players
+    function buildButtons(player) {
+        const container = $(`btns-${player}`);
+        COSTS.forEach(cost => {
+            const btn = document.createElement('button');
+            btn.className = 'elixir-btn';
+            btn.textContent = `-${cost}`;
+            btn.dataset.cost = cost;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                spendElixir(player, cost);
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    buildButtons('red');
+    buildButtons('blue');
+
+    function spendElixir(player, cost) {
+        if (elixir[player] >= cost) {
+            elixir[player] -= cost;
+            updateUI();
+        }
+    }
+
+    function showPhaseBadge(title, sub) {
+        const badge = document.createElement('div');
+        badge.className = 'phase-badge';
+        badge.innerHTML = title + (sub ? `<div class="sub">${sub}</div>` : '');
+        document.body.appendChild(badge);
+        setTimeout(() => badge.remove(), 2000);
+    }
+
+    function updateUI() {
+        $('elixir-red').textContent = elixir.red;
+        $('elixir-blue').textContent = elixir.blue;
+        $('timer-red').textContent = currentTurn === 'red' ? timer : '—';
+        $('timer-blue').textContent = currentTurn === 'blue' ? timer : '—';
+
+        // Active / inactive
+        $('player-red').classList.toggle('inactive', currentTurn !== 'red');
+        $('player-blue').classList.toggle('inactive', currentTurn !== 'blue');
+
+        // Turn indicators
+        $('turn-red').classList.toggle('hidden', currentTurn !== 'red');
+        $('turn-blue').classList.toggle('hidden', currentTurn !== 'blue');
+
+        // Skip buttons — only visible for active player
+        $('skip-red').classList.toggle('hidden', currentTurn !== 'red');
+        $('skip-blue').classList.toggle('hidden', currentTurn !== 'blue');
+
+        // x2 indicators
+        $('x2-red').classList.toggle('hidden', !isDoubleElixir);
+        $('x2-blue').classList.toggle('hidden', !isDoubleElixir);
+
+        const totalTurns = turns.red + turns.blue;
+        $('turn-label').textContent = (currentTurn === 'red' ? 'ХОД КРАСНОГО' : 'ХОД СИНЕГО')
+            + ` (${totalTurns}/${END_THRESHOLD * 2})`;
+
+        // Disable buttons if not enough elixir
+        ['red', 'blue'].forEach(player => {
+            const btns = $(`btns-${player}`).querySelectorAll('.elixir-btn');
+            btns.forEach(btn => {
+                const cost = parseInt(btn.dataset.cost);
+                btn.classList.toggle('disabled', elixir[player] < cost);
+            });
+        });
+    }
+
+    function endGame() {
+        clearInterval(interval);
+        gameStarted = false;
+        $('game-over').classList.remove('hidden');
+        $('reset-btn').classList.add('hidden');
+        $('game-over-info').textContent =
+            `Красный: ${elixir.red} эликсира | Синий: ${elixir.blue} эликсира`;
+    }
+
+    function switchTurn() {
+        // Give elixir to the player whose turn just ended
+        const gain = isDoubleElixir ? 2 : 1;
+        elixir[currentTurn] = Math.min(elixir[currentTurn] + gain, MAX_ELIXIR);
+        turns[currentTurn]++;
+
+        // Check for x2 phase
+        if (!isDoubleElixir && turns.red >= X2_THRESHOLD && turns.blue >= X2_THRESHOLD) {
+            isDoubleElixir = true;
+            showPhaseBadge('x2 ЭЛИКСИР', 'Теперь +2 за ход!');
+        }
+
+        // Check for game over
+        if (turns.red >= END_THRESHOLD && turns.blue >= END_THRESHOLD) {
+            endGame();
+            return;
+        }
+
+        // Switch
+        currentTurn = currentTurn === 'red' ? 'blue' : 'red';
+        timer = TURN_TIME;
+        updateUI();
+
+        if (navigator.vibrate) navigator.vibrate(200);
+    }
+
+    function tick() {
+        timer--;
+        if (timer <= 0) {
+            switchTurn();
+        } else {
+            updateUI();
+        }
+    }
+
+    function startGame() {
+        $('start-screen').classList.add('hidden');
+        $('reset-btn').classList.remove('hidden');
+        gameStarted = true;
+        currentTurn = 'red';
+        elixir = { red: 0, blue: 0 };
+        turns = { red: 0, blue: 0 };
+        isDoubleElixir = false;
+        timer = TURN_TIME;
+        updateUI();
+        interval = setInterval(tick, 1000);
+    }
+
+    function resetGame() {
+        clearInterval(interval);
+        gameStarted = false;
+        $('start-screen').classList.remove('hidden');
+        $('reset-btn').classList.add('hidden');
+        $('game-over').classList.add('hidden');
+    }
+
+    // Skip turn buttons
+    $('skip-red').addEventListener('click', (e) => { e.stopPropagation(); switchTurn(); });
+    $('skip-blue').addEventListener('click', (e) => { e.stopPropagation(); switchTurn(); });
+
+    $('start-btn').addEventListener('click', startGame);
+    $('reset-btn').addEventListener('click', resetGame);
+    $('restart-btn').addEventListener('click', () => { resetGame(); startGame(); });
+</script>
+
+</body>
+</html>
